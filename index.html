@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Spotify</title>
+  <style>
+    :root{
+      --bg:#000;
+      --bg2:#0f0f10;
+      --bg3:#18181a;
+      --txt:#f5f5f5;
+      --muted:#b3b3b3;
+      --green:#1db954;
+      --line:#242427;
+    }
+    *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial}
+    body{margin:0;background:var(--bg);color:var(--txt)}
+    header{
+      position:sticky;top:0;z-index:10;
+      background:
+        radial-gradient(1200px 200px at 0% -20%, rgba(29,185,84,0.25), transparent 60%),
+        linear-gradient(180deg,#121213,rgba(0,0,0,0.95));
+      padding:12px 14px 10px;border-bottom:1px solid #0b0b0c;
+      backdrop-filter: blur(6px);
+    }
+    .topbar{display:flex;align-items:center;gap:10px}
+    .logo{width:26px;height:26px;border-radius:50%;background:var(--green);display:grid;place-items:center;color:#000;font-weight:900;font-size:12px;flex:0 0 auto}
+    .search{flex:1;display:flex;align-items:center;background:#fff;color:#111;border-radius:10px;padding:8px 10px;gap:8px;font-size:15px}
+    .search input{border:0;outline:0;flex:1;font-size:15px;background:transparent}
+    .chips{display:flex;gap:8px;overflow:auto;padding-top:8px;scrollbar-width:none}
+    .chips::-webkit-scrollbar{display:none}
+    .chip{padding:6px 10px;border-radius:999px;background:var(--bg3);color:var(--txt);font-size:13px;white-space:nowrap;border:1px solid #202022}
+    main{padding:8px 8px 104px}
+    .section-title{font-weight:800;font-size:18px;margin:6px 6px 8px}
+    .results{background:var(--bg2);border-radius:12px;padding:2px 0;border:1px solid #111;overflow:hidden}
+    .row{display:grid;grid-template-columns:52px 1fr auto;gap:10px;padding:10px 12px;align-items:center;border-top:1px solid var(--line);cursor:pointer}
+    .row:first-child{border-top:0}
+    .cover{width:52px;height:52px;border-radius:6px;background:#333;overflow:hidden}
+    .cover img{width:100%;height:100%;object-fit:cover;display:block}
+    .meta{min-width:0}
+    .title{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .artist{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+    .duration{font-size:12px;color:var(--muted);padding-left:8px}
+    .kebab{color:#9a9a9a;font-size:18px;padding:0 6px}
+    .row:hover{background:#171719}
+    .row.active{background:rgba(29,185,84,0.12);outline:1px solid rgba(29,185,84,0.4)}
+
+    .player{
+      position:fixed;left:0;right:0;bottom:0;z-index:20;
+      background:linear-gradient(180deg,#101011,#0a0a0b);
+      border-top:1px solid #1b1b1d;padding:10px 12px 12px;
+      display:grid;grid-template-columns:56px 1fr auto;gap:10px;align-items:center;
+    }
+    .p-cover{width:56px;height:56px;border-radius:8px;background:#333;background-size:cover;background-position:center}
+    .p-meta .p-title{font-weight:800;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .p-meta .p-artist{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .p-controls{display:flex;align-items:center;gap:10px;color:#ddd;font-size:12px}
+    .btn{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:#222;border:1px solid #333;cursor:pointer;user-select:none}
+    .btn.playbig{background:var(--green);color:#000;border-color:var(--green);font-weight:900}
+    .bar{margin-top:6px;height:3px;background:#2a2a2d;border-radius:999px;overflow:hidden}
+    .bar > div{height:100%;width:0%;background:#ddd}
+    .timeRow{margin-top:5px;display:flex;justify-content:space-between;font-size:11px;color:#9b9b9b}
+    .hint{text-align:center;color:#666;font-size:11px;margin-top:6px}
+
+    /* En móvil, que ocupe más la pantalla */
+    @media (min-width:600px){
+      body{max-width:420px;margin:0 auto;background:#000}
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div class="topbar">
+    <div class="logo">)))</div>
+    <div class="search">
+      🔎
+      <input id="q" type="text" placeholder="¿Qué quieres escuchar?" />
+    </div>
+    <div style="width:24px;text-align:center;color:#bbb;">⚙️</div>
+  </div>
+  <div class="chips">
+    <div class="chip">Todo</div>
+    <div class="chip">Canciones</div>
+    <div class="chip">Artistas</div>
+    <div class="chip">Álbumes</div>
+    <div class="chip">Listas</div>
+    <div class="chip">Podcasts</div>
+  </div>
+</header>
+
+<main>
+  <div class="section-title">Resultados</div>
+  <div class="results" id="results"></div>
+</main>
+
+<div class="player">
+  <div class="p-cover" id="pCover"></div>
+  <div class="p-meta">
+    <div class="p-title" id="pTitle">—</div>
+    <div class="p-artist" id="pArtist">—</div>
+    <div class="bar"><div id="pBar"></div></div>
+    <div class="timeRow"><span id="pCur">0:00</span><span id="pDur">0:00</span></div>
+    <div class="hint">Toca una canción para reproducir un preview</div>
+  </div>
+  <div class="p-controls">
+    <div class="btn" id="pPrev">⏮</div>
+    <div class="btn playbig" id="pPlay">▶</div>
+    <div class="btn" id="pNext">⏭</div>
+  </div>
+</div>
+
+<audio id="audio" preload="none"></audio>
+
+<script>
+const SONGS = [
+  {
+    "title": "Blinding Lights",
+    "artist": "The Weeknd",
+    "duration": "3:20",
+    "cover": "https://i.scdn.co/image/ab67616d0000b273a3eff72f62782fb589a492f9",
+    "preview": "https://cdn.pixabay.com/download/audio/2022/10/09/audio_1a0f5dbf5d.mp3?filename=night-run-121420.mp3"
+  },
+  {
+    "title": "As It Was",
+    "artist": "Harry Styles",
+    "duration": "2:47",
+    "cover": "https://i.scdn.co/image/ab67616d0000b273b46f74097655d7f353caab14",
+    "preview": "https://cdn.pixabay.com/download/audio/2022/03/15/audio_7f9f0eb7c3.mp3?filename=summer-vibes-110734.mp3"
+  },
+  {
+    "title": "Flowers",
+    "artist": "Miley Cyrus",
+    "duration": "3:21",
+    "cover": "https://i.scdn.co/image/ab67616d0000b273b9f8b6b0aeb8f4eed25baf67",
+    "preview": "https://cdn.pixabay.com/download/audio/2022/02/23/audio_9e02d8a2cf.mp3?filename=lofi-study-112191.mp3"
+  },
+  {
+    "title": "Todo de Ti",
+    "artist": "Rauw Alejandro",
+    "duration": "3:20",
+    "cover": "https://i.scdn.co/image/ab67616d0000b273f3b7d41e8d9e1be2c41c8073",
+    "preview": "https://cdn.pixabay.com/download/audio/2021/10/25/audio_566f9bca39.mp3?filename=reggaeton-hip-hop-11054.mp3"
+  },
+  {
+    "title": "Despechá",
+    "artist": "ROSALÍA",
+    "duration": "2:37",
+    "cover": "https://i.scdn.co/image/ab67616d0000b273a0b22a96d569c0c1c6fba109",
+    "preview": "https://cdn.pixabay.com/download/audio/2021/11/01/audio_b1b69cbbe8.mp3?filename=latin-pop-11271.mp3"
+  },
+  {
+    "title": "La Bachata",
+    "artist": "Manuel Turizo",
+    "duration": "2:43",
+    "cover": "https://i.scdn.co/image/ab67616d0000b2730fc6863b8ad48c7f3bb78426",
+    "preview": "https://cdn.pixabay.com/download/audio/2022/03/08/audio_8a4b8f3c1c.mp3?filename=baila-conmigo-110070.mp3"
+  }
+];
+
+const resultsEl = document.getElementById("results");
+const qEl = document.getElementById("q");
+const pTitle = document.getElementById("pTitle");
+const pArtist = document.getElementById("pArtist");
+const pCover = document.getElementById("pCover");
+const pPlay = document.getElementById("pPlay");
+const pPrev = document.getElementById("pPrev");
+const pNext = document.getElementById("pNext");
+const pBar = document.getElementById("pBar");
+const pCur = document.getElementById("pCur");
+const pDur = document.getElementById("pDur");
+const audio = document.getElementById("audio");
+
+let filtered = [...SONGS];
+let activeIndex = null;
+let playing = false;
+
+function fmtTime(sec){
+  if(!isFinite(sec)) return "0:00";
+  const m = Math.floor(sec/60);
+  const s = Math.floor(sec%60).toString().padStart(2,"0");
+  return `${m}:${s}`;
+}
+
+function render(list){
+  resultsEl.innerHTML = "";
+  list.forEach((s, i) => {
+    const row = document.createElement("div");
+    row.className = "row";
+    row.dataset.index = i;
+    row.innerHTML = `
+      <div class="cover">${s.cover ? `<img src="${s.cover}" alt="">` : ""}</div>
+      <div class="meta">
+        <div class="title">${s.title}</div>
+        <div class="artist">${s.artist}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="duration">${s.duration}</div>
+        <div class="kebab">⋯</div>
+      </div>
+    `;
+    row.addEventListener("click", () => selectSong(i,true));
+    resultsEl.appendChild(row);
+  });
+  updateActiveRow();
+}
+
+function updateActiveRow(){
+  [...resultsEl.children].forEach((row, i) => {
+    row.classList.toggle("active", i === activeIndex);
+  });
+}
+
+function loadSong(i){
+  activeIndex = i;
+  const s = filtered[i];
+  pTitle.textContent = s.title;
+  pArtist.textContent = s.artist;
+  if(s.cover){
+    pCover.style.backgroundImage = `url('${s.cover}')`;
+  } else {
+    pCover.style.backgroundImage = "";
+  }
+  audio.src = s.preview || "";
+  audio.currentTime = 0;
+}
+
+function selectSong(i, autoPlay){
+  loadSong(i);
+  updateActiveRow();
+  if(autoPlay && audio.src){
+    play();
+  }
+}
+
+function play(){
+  if(activeIndex == null) return;
+  audio.play().then(() => {
+    playing = true;
+    pPlay.textContent = "⏸";
+  }).catch(()=>{ /* si el navegador bloquea, no pasa nada */ });
+}
+
+function pause(){
+  audio.pause();
+  playing = false;
+  pPlay.textContent = "▶";
+}
+
+pPlay.addEventListener("click", () => {
+  if(activeIndex == null) return;
+  playing ? pause() : play();
+});
+
+pPrev.addEventListener("click", () => {
+  if(activeIndex == null) return;
+  const ni = (activeIndex - 1 + filtered.length) % filtered.length;
+  selectSong(ni,true);
+});
+
+pNext.addEventListener("click", () => {
+  if(activeIndex == null) return;
+  const ni = (activeIndex + 1) % filtered.length;
+  selectSong(ni,true);
+});
+
+audio.addEventListener("timeupdate", () => {
+  const pct = (audio.currentTime / (audio.duration||1))*100;
+  pBar.style.width = pct + "%";
+  pCur.textContent = fmtTime(audio.currentTime);
+  pDur.textContent = fmtTime(audio.duration);
+});
+
+audio.addEventListener("ended", () => {
+  // preview corto: cuando acaba, vuelve a play icon
+  pause();
+});
+
+qEl.addEventListener("input", (e) => {
+  const term = e.target.value.toLowerCase().trim();
+  filtered = SONGS.filter(s =>
+    s.title.toLowerCase().includes(term) ||
+    s.artist.toLowerCase().includes(term)
+  );
+  activeIndex = null;
+  pause();
+  pTitle.textContent = "—";
+  pArtist.textContent = "—";
+  pCover.style.backgroundImage = "";
+  pBar.style.width = "0%";
+  pCur.textContent="0:00"; pDur.textContent="0:00";
+  render(filtered);
+});
+
+render(filtered);
+</script>
+</body>
+</html>
